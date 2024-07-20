@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { IUser } from "../types/types"
+import { IUser, IUserResponseDto } from "../types/types"
 import user from "../models/user";
 import { getCurrentDateFormatted } from "../utils/time";
 import { readUserToken } from "../utils/user";
@@ -7,8 +7,8 @@ import { ErrorHandler } from "../utils/errorHandler";
 import { catchAsyncErrors } from "../middlewares/catchAsyncErrors";
 
 interface IResponse {
-    user?: IUser;
-    users?: IUser[];
+    user?: IUserResponseDto;
+    users?: IUserResponseDto[];
     message: string;
 }
 
@@ -41,15 +41,10 @@ export const createUser = catchAsyncErrors(async (req: Request, res: Response, n
 
     await newUser.save();
 
+    const { password: _, ...userResponse } = newUser.toObject();
+
     const response: IResponse = {
-        user: {
-            id: newUser._id,
-            email: newUser.email,
-            name: newUser.name,
-            createdAt: newUser.createdAt,
-            role: newUser.role,
-            image: newUser.image
-        },
+        user: userResponse as IUserResponseDto,
         message: "User created successfully",
     }
 
@@ -88,16 +83,19 @@ export const readUserById = catchAsyncErrors(async (req: Request, res: Response,
         return next(new ErrorHandler('User not found', 404));
     }
 
+    const { password: _, ..._userResponse } = _user.toObject();
+
     const response: IResponse = {
-        user: {
-            id: _user._id,
-            email: _user.email,
-            name: _user.name,
-            createdAt: _user.createdAt,
-            updatedAt: _user.updatedAt,
-            role: _user.role,
-            image: _user.image
-        },
+        // user: {
+        //     id: _user._id,
+        //     email: _user.email,
+        //     name: _user.name,
+        //     createdAt: _user.createdAt,
+        //     updatedAt: _user.updatedAt,
+        //     role: _user.role,
+        //     image: _user.image
+        // },
+        user: _userResponse as IUserResponseDto,
         message: "User found"
     }
 
@@ -123,16 +121,19 @@ export const updateUser = catchAsyncErrors(async (req: Request, res: Response, n
 
     await _user.save();
 
+    const { password: _, ..._userResponse } = _user.toObject();
+
     const response: IResponse = {
-        user: {
-            id: _user._id,
-            email: _user.email,
-            name: _user.name,
-            createdAt: _user.createdAt,
-            updatedAt: _user.updatedAt,
-            role: _user.role,
-            image: _user.image
-        },
+        // user: {
+        //     id: _user._id,
+        //     email: _user.email,
+        //     name: _user.name,
+        //     createdAt: _user.createdAt,
+        //     updatedAt: _user.updatedAt,
+        //     role: _user.role,
+        //     image: _user.image
+        // },
+        user: _userResponse as IUserResponseDto,
         message: "User updated successfully"
     }
 
@@ -189,16 +190,19 @@ export const checkUser = catchAsyncErrors(async (req: Request, res: Response, ne
         return next(new ErrorHandler('User not found', 404));
     }
 
+    const { password: _, ..._userResponse } = _user.toObject();
+
     const response: IResponse = {
-        user: {
-            id: _user._id,
-            email: _user.email,
-            name: _user.name,
-            createdAt: _user.createdAt,
-            updatedAt: _user.updatedAt,
-            role: _user.role,
-            image: _user.image,
-        },
+        // user: {
+        //     id: _user._id,
+        //     email: _user.email,
+        //     name: _user.name,
+        //     createdAt: _user.createdAt,
+        //     updatedAt: _user.updatedAt,
+        //     role: _user.role,
+        //     image: _user.image,
+        // },
+        user: _userResponse as IUserResponseDto,
         message: "User found",
     };
 
@@ -220,10 +224,15 @@ export const getAllUsers = catchAsyncErrors(async (req: Request, res: Response, 
         return next(new ErrorHandler('Unauthorized', 401));
     }
 
-    const _users = await user.find();
+    const _users = await user.find().lean();
+
+    const userResponse = _users.map(user => {
+        const { password: _, ..._userResponse } = user;
+        return _userResponse as IUserResponseDto;
+    })
 
     const response: IResponse = {
-        users: _users,
+        users: userResponse,
         message: "All users found",
     };
 
@@ -233,22 +242,16 @@ export const getAllUsers = catchAsyncErrors(async (req: Request, res: Response, 
 export const testFunc = catchAsyncErrors(async (req: Request, res: Response, next: NextFunction) => {
     const { email } = req.params;
 
-    const _user = await user.findOne({ email });
+    const _user = await user.findOne({ email }).lean();
 
     if (!_user) {
         return next(new ErrorHandler('User not found', 404));
     }
 
+    const { password: _, ..._userResponse } = _user;
+
     const response: IResponse = {
-        user: {
-            id: _user._id,
-            email: _user.email,
-            name: _user.name,
-            createdAt: _user.createdAt,
-            updatedAt: _user.updatedAt,
-            role: _user.role,
-            image: _user.image
-        },
+        user: _userResponse as IUserResponseDto,
         message: "User found"
     }
 
