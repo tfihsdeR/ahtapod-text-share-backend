@@ -6,12 +6,6 @@ import { Request } from "express"
 //--------------------------------------------------
 
 export const readUserToken = async (req: Request): Promise<JWT | null> => {
-    // Print request headers
-    console.log('headers:', req.headers);
-    console.log('secret:', process.env.NEXTAUTH_SECRET);
-
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-    console.log('token:', token);
-
     return token;
 }

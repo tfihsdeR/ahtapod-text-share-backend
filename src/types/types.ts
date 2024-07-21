@@ -1,5 +1,7 @@
+import { ObjectId } from "mongoose";
+
 export interface IUser {
-    id?: unknown | string;
+    id?: ObjectId | string;
     email: string;
     password?: string;
     name: string;
@@ -14,7 +16,8 @@ export interface IUserResponseDto {
     email: string;
     name: string;
     createdAt: Date;
-    updatedAt: Date;
+    updatedAt?: Date;
     role: string;
     image: string;
 }
+

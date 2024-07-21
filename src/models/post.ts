@@ -3,9 +3,12 @@ import { Schema, Document, model } from "mongoose";
 interface IPost extends Document {
     title: string;
     content: string;
+    summary: string;
     createdAt: Date;
     updatedAt: Date;
     createdBy: Schema.Types.ObjectId;
+    createdByName: string;
+    updatedBy?: Schema.Types.ObjectId;
 }
 
 const postSchema = new Schema<IPost>({
@@ -20,6 +23,11 @@ const postSchema = new Schema<IPost>({
         required: [true, "Please enter your content."],
         trim: true
     },
+    summary: {
+        type: String,
+        required: [true, "Please enter your description."],
+        trim: true
+    },
     createdAt: {
         type: Date,
         default: new Date(new Date().getTime() + 3 * 60 * 60 * 1000)
@@ -32,6 +40,15 @@ const postSchema = new Schema<IPost>({
         type: Schema.Types.ObjectId,
         ref: "User",
         required: [true, "Please enter the user ID."]
+    },
+    createdByName: {
+        type: String,
+        required: [true, "Please enter the user name."]
+    },
+    updatedBy: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        required: false
     }
 })
 

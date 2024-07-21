@@ -16,7 +16,6 @@ interface IResponse {
 // Exmp: When user login with Google, the password is not provided.
 export const createUser = catchAsyncErrors(async (req: Request, res: Response, next: NextFunction) => {
     const reques = req.body;
-    console.log('body:', reques);
 
     let { email, password, name, image }: { email: string, password: string, name: string, image: string } = req.body;
 
@@ -41,10 +40,15 @@ export const createUser = catchAsyncErrors(async (req: Request, res: Response, n
 
     await newUser.save();
 
-    const { password: _, ...userResponse } = newUser.toObject();
-
     const response: IResponse = {
-        user: userResponse as IUserResponseDto,
+        user: {
+            id: newUser._id,
+            email: newUser.email,
+            name: newUser.name,
+            createdAt: newUser.createdAt,
+            role: newUser.role,
+            image: newUser.image
+        },
         message: "User created successfully",
     }
 
@@ -72,30 +76,29 @@ export const readUserByEmail = catchAsyncErrors(async (req: Request, res: Respon
         },
         message: "User found"
     }
+
+    res.status(200).json(response);
 })
 
 export const readUserById = catchAsyncErrors(async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
 
-    const _user = await user.findById(id);
+    const _user = await user.findById(id).lean();
 
     if (!_user) {
         return next(new ErrorHandler('User not found', 404));
     }
 
-    const { password: _, ..._userResponse } = _user.toObject();
-
     const response: IResponse = {
-        // user: {
-        //     id: _user._id,
-        //     email: _user.email,
-        //     name: _user.name,
-        //     createdAt: _user.createdAt,
-        //     updatedAt: _user.updatedAt,
-        //     role: _user.role,
-        //     image: _user.image
-        // },
-        user: _userResponse as IUserResponseDto,
+        user: {
+            id: _user._id,
+            email: _user.email,
+            name: _user.name,
+            createdAt: _user.createdAt,
+            updatedAt: _user.updatedAt,
+            role: _user.role,
+            image: _user.image
+        },
         message: "User found"
     }
 
