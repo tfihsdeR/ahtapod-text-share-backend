@@ -1,15 +1,26 @@
 import { Request, Response, NextFunction } from "express";
-import { IUser, IUserResponseDto } from "../types/types"
 import user from "../models/user";
 import { getCurrentDateFormatted } from "../utils/time";
 import { readUserToken } from "../utils/user";
 import { ErrorHandler } from "../utils/errorHandler";
 import { catchAsyncErrors } from "../middlewares/catchAsyncErrors";
+import { ObjectId } from "mongoose";
+
+interface IUserResponseDto {
+    id: unknown | string;
+    email: string;
+    name: string;
+    createdAt: Date;
+    updatedAt?: Date;
+    updatedBy?: string;
+    role: string;
+    image: string;
+}
 
 interface IResponse {
     user?: IUserResponseDto;
     users?: IUserResponseDto[];
-    message: string;
+    success: boolean;
 }
 
 // The password is set to a random string if it is not provided.
@@ -47,9 +58,9 @@ export const createUser = catchAsyncErrors(async (req: Request, res: Response, n
             name: newUser.name,
             createdAt: newUser.createdAt,
             role: newUser.role,
-            image: newUser.image
+            image: newUser.image,
         },
-        message: "User created successfully",
+        success: true
     }
 
     res.status(201).json(response);
@@ -70,11 +81,12 @@ export const readUserByEmail = catchAsyncErrors(async (req: Request, res: Respon
             email: _user.email,
             name: _user.name,
             createdAt: _user.createdAt,
+            updatedBy: _user.updatedBy.toString(),
             updatedAt: _user.updatedAt,
             role: _user.role,
-            image: _user.image
+            image: _user.image,
         },
-        message: "User found"
+        success: true
     }
 
     res.status(200).json(response);
@@ -96,10 +108,11 @@ export const readUserById = catchAsyncErrors(async (req: Request, res: Response,
             name: _user.name,
             createdAt: _user.createdAt,
             updatedAt: _user.updatedAt,
+            updatedBy: _user.updatedBy.toString(),
             role: _user.role,
             image: _user.image
         },
-        message: "User found"
+        success: true
     }
 
     res.status(200).json(response);
@@ -121,23 +134,24 @@ export const updateUser = catchAsyncErrors(async (req: Request, res: Response, n
     _user.email = newEmail;
     _user.password = password;
     _user.updatedAt = await getCurrentDateFormatted('tr');
+    _user.updatedBy = _user._id as ObjectId;
 
     await _user.save();
 
     const { password: _, ..._userResponse } = _user.toObject();
 
     const response: IResponse = {
-        // user: {
-        //     id: _user._id,
-        //     email: _user.email,
-        //     name: _user.name,
-        //     createdAt: _user.createdAt,
-        //     updatedAt: _user.updatedAt,
-        //     role: _user.role,
-        //     image: _user.image
-        // },
-        user: _userResponse as IUserResponseDto,
-        message: "User updated successfully"
+        user: {
+            id: _user._id,
+            email: _user.email,
+            name: _user.name,
+            createdAt: _user.createdAt,
+            updatedAt: _user.updatedAt,
+            updatedBy: _user.updatedBy.toString(),
+            role: _user.role,
+            image: _user.image
+        },
+        success: true
     }
 
     res.status(200).json(response);
@@ -155,7 +169,7 @@ export const deleteUserByEmail = catchAsyncErrors(async (req: Request, res: Resp
     await _user.deleteOne();
 
     const response: IResponse = {
-        message: "User deleted successfully"
+        success: true
     }
 
     res.status(200).json(response);
@@ -173,41 +187,8 @@ export const deleteUserById = catchAsyncErrors(async (req: Request, res: Respons
     await _user.deleteOne();
 
     const response: IResponse = {
-        message: "User deleted successfully"
+        success: true
     }
-
-    res.status(200).json(response);
-})
-
-export const checkUser = catchAsyncErrors(async (req: Request, res: Response, next: NextFunction) => {
-    const token = await readUserToken(req);
-
-    if (!token) {
-        return next(new ErrorHandler('Unauthorized', 401));
-    }
-
-    const { email, name } = token;
-    const _user = await user.findOne({ email });
-
-    if (!_user) {
-        return next(new ErrorHandler('User not found', 404));
-    }
-
-    const { password: _, ..._userResponse } = _user.toObject();
-
-    const response: IResponse = {
-        // user: {
-        //     id: _user._id,
-        //     email: _user.email,
-        //     name: _user.name,
-        //     createdAt: _user.createdAt,
-        //     updatedAt: _user.updatedAt,
-        //     role: _user.role,
-        //     image: _user.image,
-        // },
-        user: _userResponse as IUserResponseDto,
-        message: "User found",
-    };
 
     res.status(200).json(response);
 })
@@ -229,14 +210,20 @@ export const getAllUsers = catchAsyncErrors(async (req: Request, res: Response, 
 
     const _users = await user.find().lean();
 
-    const userResponse = _users.map(user => {
-        const { password: _, ..._userResponse } = user;
-        return _userResponse as IUserResponseDto;
-    })
-
     const response: IResponse = {
-        users: userResponse,
-        message: "All users found",
+        users: _users.map(user => {
+            return {
+                id: user._id,
+                email: user.email,
+                name: user.name,
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt,
+                updatedBy: user.updatedBy.toString(),
+                role: user.role,
+                image: user.image
+            }
+        }),
+        success: true
     };
 
     res.status(200).json(response);
@@ -254,8 +241,17 @@ export const testFunc = catchAsyncErrors(async (req: Request, res: Response, nex
     const { password: _, ..._userResponse } = _user;
 
     const response: IResponse = {
-        user: _userResponse as IUserResponseDto,
-        message: "User found"
+        user: {
+            id: _user._id,
+            email: _user.email,
+            name: _user.name,
+            createdAt: _user.createdAt,
+            updatedAt: _user.updatedAt,
+            updatedBy: _user.updatedBy.toString(),
+            role: _user.role,
+            image: _user.image
+        },
+        success: true
     }
 
     res.status(200).json(response);

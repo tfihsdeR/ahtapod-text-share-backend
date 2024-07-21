@@ -8,6 +8,7 @@ interface IUser extends Document {
     name: string;
     createdAt: Date;
     updatedAt: Date;
+    updatedBy: Schema.Types.ObjectId,
     role: string;
     image: string;
 }
@@ -39,6 +40,11 @@ const userSchema = new Schema<IUser>({
     },
     updatedAt: {
         type: Date,
+        required: false
+    },
+    updatedBy: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
         required: false
     },
     role: {
