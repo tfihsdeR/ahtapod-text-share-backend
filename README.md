@@ -90,3 +90,5 @@ On the main page, you will find a button with a '+' plus sign. Click on it and s
 - `GET /post/readById/:id`
 - `DELETE /post/removeById/:id` (Authorization required)
 - `PUT /post/updateById/:id` (Authorization required)
+
+### You should send all cookies almost by every request. The backend api checks the user authentication by cookies.
