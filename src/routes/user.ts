@@ -4,20 +4,24 @@ import {
     readUserByEmail,
     deleteUserByEmail,
     readUserById,
-    testFunc
+    readAllUsers,
+    deleteUserById,
+    updateUser,
 } from '../controllers/user';
-import { isAuthenticatedUser } from '../middlewares/userAuthentication';
+import { authorizeRoles, isAuthenticatedUser } from '../middlewares/userAuthentication';
 
 const router = express.Router();
 
 router.post('/user/create', createUser);
-router.delete('/user/deleteByEmail/:email', deleteUserByEmail);
-
-router.get('/user/test/:email', testFunc);
-
 router.get('/user/readByEmail/:email', readUserByEmail);
+
+// Authenticated routes
 router.route('/user/readById/:id').get(isAuthenticatedUser, readUserById);
+router.route('/user/deleteById/:id').delete(isAuthenticatedUser, deleteUserById);
+router.route('/user/deleteByEmail/:email').delete(isAuthenticatedUser, deleteUserByEmail);
+router.route('/user/update').put(isAuthenticatedUser, updateUser);
 
-
+// Admin routes
+router.route('/user/readAll').get(isAuthenticatedUser, authorizeRoles('admin'), readAllUsers);
 
 export default router;

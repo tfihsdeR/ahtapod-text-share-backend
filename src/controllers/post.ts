@@ -15,6 +15,7 @@ interface IPostResponseDto {
     updatedAt?: Date;
     createdBy?: string;
     createdByName?: string;
+    updatedBy?: string;
 }
 
 interface IResponse {
@@ -94,7 +95,8 @@ export const readPostById = catchAsyncErrors(async (req: Request, res: Response,
             summary: post.summary,
             createdAt: post.createdAt,
             createdBy: post.createdBy.toString(),
-            createdByName: post.createdByName
+            createdByName: post.createdByName,
+            updatedBy: post.updatedBy?.toString()
         },
         success: true
     }
@@ -111,7 +113,7 @@ export const removePostById = catchAsyncErrors(async (req: Request, res: Respons
         return next(new ErrorHandler('No post found', 404));
     }
 
-    if (role !== 'admin' && post.createdBy.toString() !== id) {
+    if (role !== 'admin' || post.createdBy.toString() !== id) {
         return next(new ErrorHandler('You are not authorized to delete this post', 401));
     }
 
@@ -137,17 +139,27 @@ export const updatePostById = catchAsyncErrors(async (req: Request, res: Respons
         return next(new ErrorHandler('No post found', 404));
     }
 
-    if (post.createdBy.toString() !== req.user!.id && req.user!.role !== 'admin') {
-        return next(new ErrorHandler('You are not authorized to update this post', 401));
+    // There is an issue with the javascript compiler. If I get out the user authenication checking out of the checkUserAuthentication function I am getting an error with the "req.user!.id as ObjectId" part.
+    // It is weird but it is what it is. I will keep it like this for now.
+    const checkUserAuthentication = () => {
+        if (post.createdBy.toString() !== req.user!.id || req.user!.role !== 'admin') {
+            return false
+        } else {
+            return true
+        }
     }
 
-    post.title = title;
-    post.content = content;
-    post.summary = summary;
-    post.updatedAt = await getCurrentDateFormatted('tr');
-    post.updatedBy = req.user!.id as ObjectId;
+    if (checkUserAuthentication()) {
+        post.title = title;
+        post.content = content;
+        post.summary = summary;
+        post.updatedAt = await getCurrentDateFormatted('tr');
+        post.updatedBy = req.user!.id as ObjectId;
 
-    await post.save();
+        await post.save();
+    } else {
+        return next(new ErrorHandler('You are not authorized to update this post', 401));
+    }
 
     const response: IResponse = {
         post: {
@@ -157,7 +169,8 @@ export const updatePostById = catchAsyncErrors(async (req: Request, res: Respons
             summary: post.summary,
             createdAt: post.createdAt,
             createdBy: post.createdBy.toString(),
-            createdByName: post.createdByName
+            createdByName: post.createdByName,
+            updatedBy: post.updatedBy?.toString()
         },
         success: true
     }

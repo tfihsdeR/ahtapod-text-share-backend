@@ -1,6 +1,5 @@
 import User from '../models/user';
 import { Request, Response, NextFunction } from 'express';
-import { readUserToken } from '../utils/user';
 import { IUser } from '../types/types';
 
 import { ErrorHandler } from '../utils/errorHandler';

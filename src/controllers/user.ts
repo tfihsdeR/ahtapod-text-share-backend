@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import user from "../models/user";
+import User from "../models/user";
 import { getCurrentDateFormatted } from "../utils/time";
-import { readUserToken } from "../utils/user";
 import { ErrorHandler } from "../utils/errorHandler";
 import { catchAsyncErrors } from "../middlewares/catchAsyncErrors";
 import { ObjectId } from "mongoose";
@@ -38,11 +37,11 @@ export const createUser = catchAsyncErrors(async (req: Request, res: Response, n
         password = Math.random().toString(36).slice(-8);
     }
 
-    if (!email || !password || !name) {
+    if (!email || !password) {
         return next(new ErrorHandler('Please provide all fields', 400));
     }
 
-    const newUser = new user({
+    const newUser = new User({
         email,
         password,
         name,
@@ -69,7 +68,7 @@ export const createUser = catchAsyncErrors(async (req: Request, res: Response, n
 export const readUserByEmail = catchAsyncErrors(async (req: Request, res: Response, next: NextFunction) => {
     const { email } = req.params;
 
-    const _user = await user.findOne({ email });
+    const _user = await User.findOne({ email });
 
     if (!_user) {
         return next(new ErrorHandler('User not found', 404));
@@ -81,8 +80,8 @@ export const readUserByEmail = catchAsyncErrors(async (req: Request, res: Respon
             email: _user.email,
             name: _user.name,
             createdAt: _user.createdAt,
-            updatedBy: _user.updatedBy.toString(),
             updatedAt: _user.updatedAt,
+            updatedBy: _user.updatedBy?.toString(),
             role: _user.role,
             image: _user.image,
         },
@@ -92,25 +91,26 @@ export const readUserByEmail = catchAsyncErrors(async (req: Request, res: Respon
     res.status(200).json(response);
 })
 
+// Admin Route
 export const readUserById = catchAsyncErrors(async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
 
-    const _user = await user.findById(id).lean();
+    const user = await User.findById(id).lean();
 
-    if (!_user) {
+    if (!user) {
         return next(new ErrorHandler('User not found', 404));
     }
 
     const response: IResponse = {
         user: {
-            id: _user._id,
-            email: _user.email,
-            name: _user.name,
-            createdAt: _user.createdAt,
-            updatedAt: _user.updatedAt,
-            updatedBy: _user.updatedBy.toString(),
-            role: _user.role,
-            image: _user.image
+            id: user._id,
+            email: user.email,
+            name: user.name,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+            updatedBy: user.updatedBy?.toString(),
+            role: user.role,
+            image: user.image
         },
         success: true
     }
@@ -121,35 +121,37 @@ export const readUserById = catchAsyncErrors(async (req: Request, res: Response,
 export const updateUser = catchAsyncErrors(async (req: Request, res: Response, next: NextFunction) => {
     const { email } = req.params;
 
-    const _user = await user.findOne({ email });
+    const user = await User.findOne({ email });
 
-    if (!_user) {
+    if (!user) {
         return next(new ErrorHandler('User not found', 404));
+    }
+
+    if (user.role !== 'admin' || user.email !== req.user?.email) {
+        return next(new ErrorHandler('You are not allowed to update this user', 401));
     }
 
     const { name, image, password, newEmail }: { name: string, image: string, password: string, newEmail: string } = req.body;
 
-    _user.name = name;
-    _user.image = image;
-    _user.email = newEmail;
-    _user.password = password;
-    _user.updatedAt = await getCurrentDateFormatted('tr');
-    _user.updatedBy = _user._id as ObjectId;
+    user.name = name;
+    user.image = image;
+    user.email = newEmail;
+    user.password = password;
+    user.updatedAt = await getCurrentDateFormatted('tr');
+    user.updatedBy = req.user?.id as ObjectId;
 
-    await _user.save();
-
-    const { password: _, ..._userResponse } = _user.toObject();
+    await user.save();
 
     const response: IResponse = {
         user: {
-            id: _user._id,
-            email: _user.email,
-            name: _user.name,
-            createdAt: _user.createdAt,
-            updatedAt: _user.updatedAt,
-            updatedBy: _user.updatedBy.toString(),
-            role: _user.role,
-            image: _user.image
+            id: user._id,
+            email: user.email,
+            name: user.name,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+            updatedBy: user.updatedBy.toString(),
+            role: user.role,
+            image: user.image
         },
         success: true
     }
@@ -160,13 +162,13 @@ export const updateUser = catchAsyncErrors(async (req: Request, res: Response, n
 export const deleteUserByEmail = catchAsyncErrors(async (req: Request, res: Response, next: NextFunction) => {
     const { email } = req.params;
 
-    const _user = await user.findOne({ email });
+    const user = await User.findOne({ email });
 
-    if (!_user) {
+    if (!user) {
         return next(new ErrorHandler('User not found', 404));
     }
 
-    await _user.deleteOne();
+    await user.deleteOne();
 
     const response: IResponse = {
         success: true
@@ -178,13 +180,17 @@ export const deleteUserByEmail = catchAsyncErrors(async (req: Request, res: Resp
 export const deleteUserById = catchAsyncErrors(async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
 
-    const _user = await user.findById(id);
+    const user = await User.findById(id);
 
-    if (!_user) {
+    if (!user) {
         return next(new ErrorHandler('User not found', 404));
     }
 
-    await _user.deleteOne();
+    if (user.role !== 'admin' || user.email !== req.user?.email) {
+        return next(new ErrorHandler('You are not allowed to delete this user', 401));
+    }
+
+    await user.deleteOne();
 
     const response: IResponse = {
         success: true
@@ -193,66 +199,31 @@ export const deleteUserById = catchAsyncErrors(async (req: Request, res: Respons
     res.status(200).json(response);
 })
 
-export const getAllUsers = catchAsyncErrors(async (req: Request, res: Response, next: NextFunction) => {
-    const token = await readUserToken(req);
+// Admin route
+export const readAllUsers = catchAsyncErrors(async (req: Request, res: Response, next: NextFunction) => {
+    const users = await User.find()
 
-    if (!token) {
-        return next(new ErrorHandler('Unauthorized', 401));
+    if (!users) {
+        return next(new ErrorHandler('Users not found', 404));
     }
 
-    const { email } = token;
-
-    const _user = await user.findOne({ email });
-
-    if (!_user || _user.role !== 'admin') {
-        return next(new ErrorHandler('Unauthorized', 401));
-    }
-
-    const _users = await user.find().lean();
+    const _users = users.map(user => {
+        return {
+            id: user._id,
+            email: user.email,
+            name: user.name,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+            updatedBy: user.updatedBy?.toString(),
+            role: user.role,
+            image: user.image
+        }
+    })
 
     const response: IResponse = {
-        users: _users.map(user => {
-            return {
-                id: user._id,
-                email: user.email,
-                name: user.name,
-                createdAt: user.createdAt,
-                updatedAt: user.updatedAt,
-                updatedBy: user.updatedBy.toString(),
-                role: user.role,
-                image: user.image
-            }
-        }),
+        users: _users,
         success: true
     };
-
-    res.status(200).json(response);
-})
-
-export const testFunc = catchAsyncErrors(async (req: Request, res: Response, next: NextFunction) => {
-    const { email } = req.params;
-
-    const _user = await user.findOne({ email }).lean();
-
-    if (!_user) {
-        return next(new ErrorHandler('User not found', 404));
-    }
-
-    const { password: _, ..._userResponse } = _user;
-
-    const response: IResponse = {
-        user: {
-            id: _user._id,
-            email: _user.email,
-            name: _user.name,
-            createdAt: _user.createdAt,
-            updatedAt: _user.updatedAt,
-            updatedBy: _user.updatedBy.toString(),
-            role: _user.role,
-            image: _user.image
-        },
-        success: true
-    }
 
     res.status(200).json(response);
 })
