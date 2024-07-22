@@ -18,7 +18,7 @@ Before you begin, make sure you have [Node.js](https://nodejs.org/) installed on
 
 ## Running the Frontend
 - Open a new terminal window.
-- Navigate to the backend directory:
+- Download to the frontend directory:
     - ***git clone https://github.com/tfihsdeR/ahtapod-text-share-frontend.git***
  
 - Install any required dependencies:
