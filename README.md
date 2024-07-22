@@ -29,5 +29,13 @@ Before you begin, make sure you have [Node.js](https://nodejs.org/) installed on
 
 - Open a Browser
     - ***Navigate to: http://localhost:3000/***
+ 
+## Login User
+- Admin User
+    - ***email:    testuser@test.com***
+    - ***password: 123456***
+ 
+- Default User
+    - ***Just create a new user :)***
 
 Now, both the frontend and backend servers should be running, and you can begin using the rastKanban application.
